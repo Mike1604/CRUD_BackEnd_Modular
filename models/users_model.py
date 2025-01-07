@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Literal, Optional
+from typing import Optional
 
 class User(BaseModel):
     id: Optional[str] = None 
@@ -7,6 +7,11 @@ class User(BaseModel):
     first_name: str
     last_name: str
     password: str
-    role: Literal['superuser', 'alumno', 'admin']
     profile_picture_path: Optional[str] = None
-    cu: str
+
+class UpdateUser(BaseModel):
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    profile_picture_path: Optional[str] = None

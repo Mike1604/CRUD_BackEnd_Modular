@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from models.users_model import User
-from controller.user_controller import create_user, get_all_users;
+from models.users_model import User, UpdateUser
+from controller.user_controller import create_user, get_all_users, get_user_by_id, update_user_by_id;
 
 router = APIRouter()
 
@@ -13,9 +13,14 @@ def get_users():
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error getting users")
 
-@router.get('/{id}')
-def get_user(user: User, id: str):
-    return {"accepted":"Users"};
+@router.get('/{user_id}')
+def get_user(id: str):
+    try:
+        result = get_user_by_id(id);
+        return result
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Error getting users")
 
 @router.post('/')
 def save_user(user: User):
@@ -31,9 +36,19 @@ def save_user(user: User):
         raise HTTPException(status_code=500, detail="Error creating user")
     
 
-@router.put('/{id}')
-def update_user(user: User):
-    return {"acepted":"Users"};
+@router.put("/{user_id}")
+def update_user(user_id: str, updates: UpdateUser):
+    user = get_user_by_id(user_id)  
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = updates.model_dump(exclude_unset=True)
+    
+    user.update(update_data)
+
+    update_user_by_id(user)  
+    
+    return {"message": "User updated successfully", "user": user}
 
 @router.delete('/{id}')
 def delete_user(user: User):
