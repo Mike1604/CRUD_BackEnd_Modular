@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from models.users_model import User;
 from models.users_model import UpdateUser;
 from bson import ObjectId
@@ -22,13 +23,31 @@ def get_user_by_id(id: str):
         id_mongo = ObjectId(id);
         user = collection.find_one({"_id":id_mongo})
 
+        if user is None:
+            raise ValueError(f"No user found with id: {id}")
+
         user["id"] = str(user["_id"]) 
         del user["_id"]
         
         return user
     except Exception as e:
-        print(f"Error getting user: {e}")
+        print(f"Error getting user by ID: {e}")
         raise
+
+def get_user_by_email(email: str):
+    try:
+        user = collection.find_one({"email": email})
+
+        if user is None:
+            return None
+
+        user["id"] = str(user["_id"])
+        del user["_id"]
+        
+        return user
+    except Exception as e:
+        print(f"Error getting user by email: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
 
 def create_user(user: User):
     try:

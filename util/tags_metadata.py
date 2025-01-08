@@ -7,4 +7,8 @@ tags_metadata = [
         "name": "Health Check",
         "description": "Endpoints to check the status of the API.",
     },
+    {
+        "name": "Auth",
+        "description": "Endpoints for authentication.",
+    },
 ]
