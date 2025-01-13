@@ -11,10 +11,11 @@ def login(req: AuthRequest):
     print("New login request received:", req)
 
     user = get_user_by_email(req.email)
+    print("user", str(user))
     if not user or not verify_password(req.password, user.get("password")):
         raise HTTPException(
             status_code=401,
-            detail="Invalid username or password"
+            detail="Invalid email or password"
         )
 
     return {
