@@ -31,5 +31,5 @@ To check API docs you can go to
 ### In case of adding new dependencies
 If you add new dependencies make sure to update the environment.yml file by running this command:
 ```
-conda env update --file environment.yml --prune
+conda env export > environment.yml
 ```
