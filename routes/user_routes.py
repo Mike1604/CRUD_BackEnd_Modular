@@ -14,13 +14,13 @@ def get_users():
         raise HTTPException(status_code=500, detail="Error getting users")
 
 @router.get('/{user_id}')
-def get_user(id: str):
+def get_user(user_id: str):  
     try:
-        result = get_user_by_id(id);
+        result = get_user_by_id(user_id) 
         return result
     except Exception as e:
         print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail="Error getting users")
+        raise HTTPException(status_code=500, detail="Error getting user")
 
 @router.post('/')
 def save_user(user: User):
