@@ -1,10 +1,17 @@
-from fastapi import HTTPException
+import shutil
+from fastapi import HTTPException, File, UploadFile
 from models.users_model import User;
 from models.users_model import UpdateUser;
 from bson import ObjectId
 from db.db import db;
+import os
 
-collection = db.get_collection("users");
+collection = db.get_collection("users")
+UPLOAD_DIR = os.path.join(os.getcwd(), "public")
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+ALLOWED_IMAGE_EXTENSIONS = {"image/jpeg", "image/png"}
 
 def get_all_users():
     try:
@@ -13,6 +20,8 @@ def get_all_users():
         for user in users:
             user["id"] = str(user["_id"])  
             del user["_id"]
+            del user["password"]
+            del user["role"]
         return users
     except Exception as e:
         print(f"Error getting users: {e}")
@@ -20,7 +29,7 @@ def get_all_users():
 
 def get_user_by_id(id: str):
     try:
-        id_mongo = ObjectId(id);
+        id_mongo = ObjectId(id)
         user = collection.find_one({"_id":id_mongo})
 
         if user is None:
@@ -28,6 +37,8 @@ def get_user_by_id(id: str):
 
         user["id"] = str(user["_id"]) 
         del user["_id"]
+        del user["password"]
+        del user["role"]
         
         return user
     except Exception as e:
@@ -93,5 +104,14 @@ def update_user_by_id(user):
         print(f"Error updating user: {e}")
         raise
 
+def update_user_pic(profile_picture: UploadFile, user_id: str):
+    file_extension = profile_picture.filename.split(".")[-1]
+    if profile_picture.content_type not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
 
+    file_location = os.path.join(UPLOAD_DIR, f"{user_id}.{file_extension}")
 
+    with open(file_location, "wb") as f:
+        shutil.copyfileobj(profile_picture.file, f)
+
+    return f"/public/{user_id}.{file_extension}"

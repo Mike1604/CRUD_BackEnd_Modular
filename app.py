@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routes.user_routes import router as users_routes;
 from routes.health_routes import router as health_routes;
 from routes.auth import router as aut_routes;
@@ -22,6 +23,8 @@ app.add_middleware(
     allow_methods=["*"],  
     allow_headers=["*"],  
 )
+
+app.mount("/public", StaticFiles(directory="public"), name="public")
 
 app.include_router(aut_routes, prefix='/auth', tags=["Auth"]);
 app.include_router(users_routes, prefix='/users', tags=["User operations"]); 
