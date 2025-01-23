@@ -11,4 +11,8 @@ tags_metadata = [
         "name": "Auth",
         "description": "Endpoints for authentication.",
     },
+    {
+        "name": "Groups",
+        "description": "Endpoints for creating, reading, updating, and deleting groups.",
+    },
 ]
