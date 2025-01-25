@@ -42,7 +42,7 @@ def get_group_by_id(id: str):
         
         return user
     except Exception as e:
-        print(f"Error getting user by ID: {e}")
+        print(f"Error getting group by ID: {e}")
         raise
 
 def create_group(group: Group):
@@ -89,7 +89,7 @@ def update_group_pic(group_picture: UploadFile, groupId: str):
 
 
 def delete_group_pic(image_path: str):
-    relative_path = image_path.lstrip("/")  # Elimina la barra inicial si existe
+    relative_path = image_path.lstrip("/") 
     path = os.path.join(os.getcwd(), relative_path)
     print("Path trying ", path)
     if os.path.exists(path):  

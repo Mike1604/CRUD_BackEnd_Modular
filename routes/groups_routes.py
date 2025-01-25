@@ -12,7 +12,8 @@ def get_groups():
 
         for group in result:
             if "group_picture_path" in group:
-                group["group_picture_path"] = f"http://localhost:8001{group['group_picture_path']}"
+                if group["group_picture_path"] != None:
+                    group["group_picture_path"] = f"http://localhost:8001{group['group_picture_path']}"
 
         return result
     except Exception as e:
@@ -26,7 +27,8 @@ def get_group(group_id: str):
         result = get_group_by_id(group_id) 
 
         if "group_picture_path" in result:
-            result["group_picture_path"] = f"http://localhost:8001{result['group_picture_path']}"
+            if result["group_picture_path"] != None:
+                result["group_picture_path"] = f"http://localhost:8001{result['group_picture_path']}"
 
         return result
     except Exception as e:
