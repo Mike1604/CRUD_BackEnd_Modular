@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import List, Optional
 
 class User(BaseModel):
     id: Optional[str] = None 
@@ -10,6 +10,9 @@ class User(BaseModel):
     secondary_language: str
     password: str
     profile_picture_path: Optional[str] = None
+
+class UserBatchRequest(BaseModel):
+    user_ids: List[str]
 
 class UpdateUser(BaseModel):
     email: Optional[EmailStr] = None

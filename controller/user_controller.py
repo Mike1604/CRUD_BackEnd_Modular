@@ -59,6 +59,43 @@ def get_user_by_email(email: str):
     except Exception as e:
         print(f"Error getting user by email: {e}")
         raise HTTPException(status_code=500, detail="Database error")
+    
+def get_users_by_email(email: str):
+    try:
+        users = collection.find({"email": {"$regex": f"^{email}", "$options": "i"}}).limit(5)
+
+        users = list(users)
+
+        for user in users:
+            user["id"] = str(user["_id"]) 
+            del user["_id"]
+            del user["password"]
+            del user["role"]
+
+        return users
+    except Exception as e:
+        print(f"Error getting user by email: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    
+def get_users_by_batch(userIds):
+    print("Getting batch of users")
+    try:
+        user_object_ids = [ObjectId(uid) for uid in userIds]
+
+        users_cursor = collection.find({"_id": {"$in": user_object_ids}})
+        users = list(users_cursor)
+
+        for user in users:
+            user["id"] = str(user["_id"]) 
+            del user["_id"]
+            del user["password"]
+            del user["role"]
+
+        return users
+    except Exception as e:
+        print(f"Error getting user by batch: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
 
 def create_user(user: User):
     try:

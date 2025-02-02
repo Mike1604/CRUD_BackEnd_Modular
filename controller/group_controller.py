@@ -1,6 +1,7 @@
 import shutil
 import datetime
 from fastapi import HTTPException, UploadFile
+from pymongo import ReturnDocument
 from models.users_model import User;
 from models.group_models import Group, GroupMember, RoleEnum;
 from controller.user_controller import get_user_by_id
@@ -16,8 +17,16 @@ if not os.path.exists(UPLOAD_DIR):
 ALLOWED_IMAGE_EXTENSIONS = {"image/jpeg", "image/png"}
 
 #Todo: update with owned groups
-def get_all_groups():
+def get_all_groups(user_id:str):
     try:
+        user_object_id = ObjectId(user_id)
+        
+        groups = list(collection.find({
+            "$or": [
+                {"owner": user_object_id},  
+                {"members.user_id": user_object_id}  
+            ]
+        }))
         groups = list(collection.find())
 
         for group in groups:
@@ -51,8 +60,6 @@ def create_group(group: Group):
         group_data = group.model_dump()
 
         owner = get_user_by_id(group_data["owner"])
-
-        print(type(datetime.datetime.now(datetime.timezone.utc)))
 
         member = GroupMember(
             user_id=owner["id"],  
@@ -108,25 +115,85 @@ def delete_group_by_id(groupId: str):
 
     return {"message": "Group deleted successfully"}
 
-def update_group_by_id(group: Group):
+def update_group_by_id(group_id: str, updated_data: dict):
     try:
-        print("Trying to update group")
+        print(f"Trying to update group {group_id}")
         
-        id_mongo = ObjectId(group["id"])
-
-        del group["id"]
+        id_mongo = ObjectId(group_id)
         
         result = collection.update_one(
             {"_id": id_mongo}, 
-            {"$set": group}  
+            {"$set": updated_data}  
         )
         
         if result.matched_count > 0:
-            print(f"group with id {str(id_mongo)} updated successfully")
+            print(f"Group with id {group_id} updated successfully")
+            return get_group_by_id(group_id)  
         else:
-            print(f"No group found with id {id}")
+            print(f"No group found with id {group_id}")
+            return None  
             
     except Exception as e:
         print(f"Error updating group: {e}")
         raise
+
+def add_member(groupId, userId):
+    group_object_id = ObjectId(groupId)
+    
+    group = collection.find_one({"_id": group_object_id})
+    
+    if not group:
+         raise HTTPException(status_code=404, detail="Group not found")
+
+    if any(member["user_id"] == userId for member in group["members"]):
+        raise HTTPException(status_code=400, detail="User is already a member")
+
+    new_member = GroupMember(
+        user_id=userId,  
+        role=RoleEnum.usuario,        
+        since=datetime.datetime.now(datetime.timezone.utc)
+    )
+
+    result = collection.find_one_and_update(
+        {"_id": group_object_id},
+        {"$addToSet": {"members": new_member.model_dump()}},
+        return_document=ReturnDocument.AFTER  
+    )
+    
+    memberDict = new_member.model_dump()
+    new_member_added = None
+    if result:
+        for member in result.get('members', []):
+            if member['user_id'] == memberDict['user_id']:
+                new_member_added = member
+                break
+
+    if new_member_added:
+        return {"status": "success", "new_member": new_member_added}
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to add member")
+
+def remove_member(groupId, userId):
+    group_object_id = ObjectId(groupId)
+    
+    group = collection.find_one({"_id": group_object_id})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    if group["owner"] == userId:
+        raise HTTPException(status_code=400, detail="Owner cannot be removed from the group")
+    
+    if not any(member["user_id"] == userId for member in group["members"]):
+        raise HTTPException(status_code=400, detail="User is not a member of the group")
+    
+    result = collection.update_one(
+        {"_id": group_object_id},
+        {"$pull": {"members": {"user_id": userId}}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to remove member")
+
+    return {"message": "Member removed successfully"}
 

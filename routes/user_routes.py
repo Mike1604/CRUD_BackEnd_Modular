@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, Query, UploadFile
 from typing import Optional
-from models.users_model import User, UpdateUser
-from controller.user_controller import create_user, get_all_users, get_user_by_id, update_user_by_id, update_user_pic;
+from models.users_model import User, UpdateUser, UserBatchRequest
+from controller.user_controller import create_user, get_all_users, get_user_by_id, update_user_by_id, update_user_pic, get_users_by_batch, get_users_by_email;
 
 router = APIRouter()
 
@@ -9,10 +9,30 @@ router = APIRouter()
 def get_users():
     try:
         result = get_all_users()
+        
+        for user in result:
+            if "profile_picture_path" in user:
+                user["profile_picture_path"] = f"http://localhost:8001{user['profile_picture_path']}"
+        
         return result
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error getting users")
+
+@router.get('/find-users-email')
+def search_users_by_email(email: str = Query(..., min_length=1)):
+    try: 
+        users =  get_users_by_email(email)
+        
+        for user in users:
+            if "profile_picture_path" in user:
+                user["profile_picture_path"] = f"http://localhost:8001{user['profile_picture_path']}"
+        
+        return users
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Error creating user")
+    
 
 @router.get('/{user_id}')
 def get_user(user_id: str):  
@@ -26,6 +46,27 @@ def get_user(user_id: str):
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error getting user")
+    
+@router.post("/batch")
+def get_users_batch(request: UserBatchRequest):
+    user_ids = request.user_ids
+    
+    if not user_ids:
+        raise HTTPException(status_code=400, detail="La lista de IDs no puede estar vacía")
+    
+    try: 
+        result =  get_users_by_batch(user_ids)
+        
+        for user in result:
+            if "profile_picture_path" in user and user["profile_picture_path"] != None:
+                user["profile_picture_path"] = f"http://localhost:8001{user['profile_picture_path']}"
+        
+        return result
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Error creating user")
+    
+
 
 @router.post('/')
 def save_user(user: User):

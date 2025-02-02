@@ -1,14 +1,15 @@
 from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from models.group_models import Group
-from controller.group_controller import get_all_groups, create_group, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic
+from models.group_models import AddMemberRequest, Group, GroupMember, UpdateGroupData
+from controller.group_controller import get_all_groups, create_group, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
 
 router = APIRouter()
 
-@router.get('/')
-def get_groups():
+##Todo: update with JWT user id instead of endpoint
+@router.get('/{userId}')
+def get_groups(userId: str):
     try:
-        result = get_all_groups()
+        result = get_all_groups(userId)
 
         for group in result:
             if "group_picture_path" in group:
@@ -21,7 +22,7 @@ def get_groups():
         raise HTTPException(status_code=500, detail="Error getting groups")
 
 
-@router.get('/{group_id}')
+@router.get('/group/{group_id}')
 def get_group(group_id: str):  
     try:
         result = get_group_by_id(group_id) 
@@ -55,23 +56,63 @@ def add_group(
         if group_picture:
             picture_path = update_group_pic(group_picture, resultId)
             group["group_picture_path"] = picture_path
-            update_group_by_id(group)
+            update_group_by_id(group['id'], group)
         else:
             group["group_picture_path"] = None
             print("No profile picture provided")
 
+        group["group_picture_path"] = f"http://localhost:8001{group['group_picture_path']}"
+        
         return {"message": "Group created successfully", "groupdata": group,}
     except ValueError as e:
         print(f"Error: {e}")
-        raise HTTPException(status_code=400, detail="Invalid user data")  
+        raise HTTPException(status_code=400, detail="Invalid group data")  
     except Exception as e:
         print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail="Error creating user")
+        raise HTTPException(status_code=500, detail="Error creating group")
     
+@router.put('/{groupId}')
+def update_group(
+    groupId: str,
+    group_name: Optional[str] = Form(...), 
+    group_description: Optional[str] = Form(None), 
+    group_picture: Optional[UploadFile] = File(None)
+):
+    try:
+        group_db = get_group_by_id(groupId)
+        if not group_db:
+            raise HTTPException(status_code=404, detail="Group not found")
+
+        group_update = UpdateGroupData(group_name=group_name, group_description=group_description)
+        group_dict = group_update.model_dump()
+
+        if group_picture:
+            picture_path = update_group_pic(group_picture, groupId)
+            group_dict["group_picture_path"] = picture_path
+
+        updated_group = update_group_by_id(groupId, group_dict)
+
+        updated_group["group_picture_path"] = f"http://localhost:8001{updated_group['group_picture_path']}"
+
+        return {
+            "message": "Group updated successfully",
+            "groupdata": updated_group,
+        }
+    
+    except HTTPException as e:
+        raise e  
+    except ValueError as e:
+        print(f"Validation Error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid group data")
+
+    except Exception as e:
+        print(f"Unexpected Error: {e}")
+        raise HTTPException(status_code=500, detail="Error updating group")
+    
+
 @router.delete('/{group_id}')
 def delete_group(group_id: str): 
     try:
-
         group = get_group_by_id(group_id)
         
         if not group:
@@ -85,3 +126,21 @@ def delete_group(group_id: str):
     except Exception as e:
         print(f"Error deleting group: {e}")
         raise HTTPException(status_code=500, detail="Error deleting group") 
+    
+@router.post("/{group_id}/members")
+def add_member_to_group(group_id: str, request: AddMemberRequest):
+    try:
+        return add_member(group_id, request.user_id)
+    except Exception as e:
+        print(f"Error adding member to group: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    
+@router.delete("/{group_id}/members")
+def remove_member_from_group(group_id: str, request: AddMemberRequest):
+    try:
+        return remove_member(group_id, request.user_id)
+    except Exception as e:
+        print(f"Error removing member from group: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+
