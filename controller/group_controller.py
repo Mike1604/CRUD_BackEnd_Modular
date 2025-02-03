@@ -17,26 +17,25 @@ if not os.path.exists(UPLOAD_DIR):
 ALLOWED_IMAGE_EXTENSIONS = {"image/jpeg", "image/png"}
 
 #Todo: update with owned groups
-def get_all_groups(user_id:str):
+def get_all_groups(user_id: str):
     try:
-        user_object_id = ObjectId(user_id)
-        
         groups = list(collection.find({
             "$or": [
-                {"owner": user_object_id},  
-                {"members.user_id": user_object_id}  
+                {"owner": user_id},  
+                {"members.user_id": user_id}  
             ]
         }))
-        groups = list(collection.find())
 
         for group in groups:
             group["id"] = str(group["_id"])  
             del group["_id"]
             del group["members"]
+        
         return groups
     except Exception as e:
-        print(f"Error getting users: {e}")
+        print(f"Error getting groups: {e}")
         raise
+
 
 def get_group_by_id(id: str):
     try:
