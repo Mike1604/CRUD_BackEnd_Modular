@@ -3,13 +3,14 @@ import datetime
 from fastapi import HTTPException, UploadFile
 from pymongo import ReturnDocument
 from models.users_model import User;
-from models.group_models import Group, GroupMember, RoleEnum;
+from models.group_models import Group, GroupMember, GroupPost, RoleEnum;
 from controller.user_controller import get_user_by_id
 from bson import ObjectId
 from db.db import db;
 import os
 
-collection = db.get_collection("groups")
+groupCollection = db.get_collection("groups")
+groupPostCollection = db.get_collection("group_posts")
 UPLOAD_DIR = os.path.join(os.getcwd(), "public/groups_profile")
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -19,7 +20,7 @@ ALLOWED_IMAGE_EXTENSIONS = {"image/jpeg", "image/png"}
 #Todo: update with owned groups
 def get_all_groups(user_id: str):
     try:
-        groups = list(collection.find({
+        groups = list(groupCollection.find({
             "$or": [
                 {"owner": user_id},  
                 {"members.user_id": user_id}  
@@ -40,7 +41,7 @@ def get_all_groups(user_id: str):
 def get_group_by_id(id: str):
     try:
         id_mongo = ObjectId(id)
-        user = collection.find_one({"_id":id_mongo})
+        user = groupCollection.find_one({"_id":id_mongo})
 
         if user is None:
             raise ValueError(f"No group found with id: {id}")
@@ -70,7 +71,7 @@ def create_group(group: Group):
 
         group_data["group_picture_path"] = None
 
-        result = collection.insert_one(group_data)
+        result = groupCollection.insert_one(group_data)
 
         if result.acknowledged:
             print(f"Insert result: {result.inserted_id}")
@@ -107,7 +108,7 @@ def delete_group_pic(image_path: str):
 
 
 def delete_group_by_id(groupId: str):
-    delete_result = collection.delete_one({"_id": ObjectId(groupId)})
+    delete_result = groupCollection.delete_one({"_id": ObjectId(groupId)})
 
     if delete_result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="Failed to delete group")
@@ -120,7 +121,7 @@ def update_group_by_id(group_id: str, updated_data: dict):
         
         id_mongo = ObjectId(group_id)
         
-        result = collection.update_one(
+        result = groupCollection.update_one(
             {"_id": id_mongo}, 
             {"$set": updated_data}  
         )
@@ -139,7 +140,7 @@ def update_group_by_id(group_id: str, updated_data: dict):
 def add_member(groupId, userId):
     group_object_id = ObjectId(groupId)
     
-    group = collection.find_one({"_id": group_object_id})
+    group = groupCollection.find_one({"_id": group_object_id})
     
     if not group:
          raise HTTPException(status_code=404, detail="Group not found")
@@ -153,7 +154,7 @@ def add_member(groupId, userId):
         since=datetime.datetime.now(datetime.timezone.utc)
     )
 
-    result = collection.find_one_and_update(
+    result = groupCollection.find_one_and_update(
         {"_id": group_object_id},
         {"$addToSet": {"members": new_member.model_dump()}},
         return_document=ReturnDocument.AFTER  
@@ -173,10 +174,10 @@ def add_member(groupId, userId):
     if not result:
         raise HTTPException(status_code=500, detail="Failed to add member")
 
-def remove_member(groupId, userId):
+def remove_member(groupId:str, userId:str):
     group_object_id = ObjectId(groupId)
     
-    group = collection.find_one({"_id": group_object_id})
+    group = groupCollection.find_one({"_id": group_object_id})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
@@ -186,7 +187,7 @@ def remove_member(groupId, userId):
     if not any(member["user_id"] == userId for member in group["members"]):
         raise HTTPException(status_code=400, detail="User is not a member of the group")
     
-    result = collection.update_one(
+    result = groupCollection.update_one(
         {"_id": group_object_id},
         {"$pull": {"members": {"user_id": userId}}}
     )
@@ -196,3 +197,46 @@ def remove_member(groupId, userId):
 
     return {"message": "Member removed successfully"}
 
+def get_all_group_posts(group_id: str):
+    try:
+        group_posts = list(groupPostCollection.find({"group_owner" : group_id}))
+
+        for group_post in group_posts:
+            group_post["id"] = str(group_post["_id"])  
+            del group_post["_id"]
+        
+        return group_posts
+    except Exception as e:
+        print(f"Error getting groups: {e}")
+        raise
+
+def add_group_post(group_id: str, post: GroupPost):
+    try:
+        print("Trying to add a new group post")
+        
+        group_post = post.model_dump()
+        group_post["group_owner"] = group_id  
+        
+        result = groupPostCollection.insert_one(group_post)
+
+        if result.acknowledged:
+            print(f"Insert result: {result.inserted_id}")
+            return str(result.inserted_id)  
+        else:
+            raise ValueError("Failed to add the post.")
+    except Exception as e:
+        print(f"Error creating post: {e}")
+        raise
+    
+def remove_group_post(group_id: str, post_id: str):
+    
+    try:
+        delete_result = groupPostCollection.delete_one({"_id": ObjectId(post_id)})
+
+        if delete_result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Failed to delete group")
+        
+        return {"message": "Group post deleted successfully"}
+    except Exception as e:
+        print(f"Error creating post: {e}")
+        raise

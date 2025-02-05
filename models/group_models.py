@@ -23,3 +23,6 @@ class AddMemberRequest(BaseModel):
 class UpdateGroupData(BaseModel):
     group_name: str
     group_description: Optional[str] = None
+    
+class GroupPost(BaseModel):
+    text_content: str

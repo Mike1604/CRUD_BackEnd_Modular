@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from models.group_models import AddMemberRequest, Group, GroupMember, UpdateGroupData
-from controller.group_controller import get_all_groups, create_group, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
+from models.group_models import AddMemberRequest, Group, GroupPost, UpdateGroupData
+from controller.group_controller import add_group_post, get_all_group_posts, get_all_groups, create_group, remove_group_post, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
 
 router = APIRouter()
 
@@ -144,3 +144,27 @@ def remove_member_from_group(group_id: str, request: AddMemberRequest):
         raise HTTPException(status_code=500, detail="Database error")
 
 
+@router.get('/{group_id}/posts')
+def get_group_posts(group_id: str):
+    try:
+        return get_all_group_posts(group_id)
+    except Exception as e:
+        print(f"Error while getting group posts: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+@router.post('/{group_id}/posts')
+def create_group_post(group_id: str, post: GroupPost):
+    try:
+        return add_group_post(group_id, post)
+    except Exception as e:
+        print(f"Error adding a group post: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+##Use JWT to make sure the owner of the group is the one who is deleting the post
+@router.delete('/{group_id}/posts')
+def delete_group_post(group_id: str, post_id: str):
+    try:
+        return remove_group_post(group_id, post_id)
+    except Exception as e:
+        print(f"Error while removing a group post: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
