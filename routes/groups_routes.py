@@ -155,13 +155,14 @@ def get_group_posts(group_id: str):
 @router.post('/{group_id}/posts')
 def create_group_post(group_id: str, post: GroupPost):
     try:
-        return add_group_post(group_id, post)
+        result = add_group_post(group_id, post)
+        return {"post_id" : result}
     except Exception as e:
         print(f"Error adding a group post: {e}")
         raise HTTPException(status_code=500, detail="Database error")
 
 ##Use JWT to make sure the owner of the group is the one who is deleting the post
-@router.delete('/{group_id}/posts')
+@router.delete('/{group_id}/posts/{post_id}')
 def delete_group_post(group_id: str, post_id: str):
     try:
         return remove_group_post(group_id, post_id)

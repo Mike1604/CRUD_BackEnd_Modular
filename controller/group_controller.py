@@ -216,6 +216,7 @@ def add_group_post(group_id: str, post: GroupPost):
         
         group_post = post.model_dump()
         group_post["group_owner"] = group_id  
+        group_post["created_at"] = datetime.datetime.now(datetime.timezone.utc)
         
         result = groupPostCollection.insert_one(group_post)
 
