@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, File, Query, UploadFile
-from typing import Optional
-from models.users_model import User, UpdateUser, UserBatchRequest
+from fastapi import APIRouter, Depends, HTTPException, File, Query, UploadFile
+from controller.auth import verify_token
+from models.users_model import User, UpdateUser, UserBatchRequest, Token
+from controller.auth import create_jwt
 from controller.user_controller import create_user, get_all_users, get_user_by_id, update_user_by_id, update_user_pic, get_users_by_batch, get_users_by_email;
 
 router = APIRouter()
 
 @router.get('/')
-def get_users():
+def get_users(user_id: str = Depends(verify_token)):
     try:
         result = get_all_users()
         
@@ -66,14 +67,14 @@ def get_users_batch(request: UserBatchRequest):
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error creating user")
     
-
-
 @router.post('/')
 def save_user(user: User):
     print("New user received", user)
-    try:
+    try:    
         result = create_user(user)  
-        return result
+        # Generate token
+        access_token = create_jwt({"sub": result["id"]})
+        return Token(message="User created", access_token=access_token, token_type="bearer")
     except ValueError as e:  
         print(f"Error: {e}")
         raise HTTPException(status_code=400, detail="Invalid user data")  

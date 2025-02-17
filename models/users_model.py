@@ -21,3 +21,8 @@ class UpdateUser(BaseModel):
     primary_language: Optional[str] = None
     secondary_language: Optional[str] = None
     password: Optional[str] = None
+    
+class Token(BaseModel):
+    message: str
+    access_token: str
+    token_type: str

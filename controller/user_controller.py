@@ -1,5 +1,6 @@
 import shutil
 from fastapi import HTTPException, File, UploadFile
+from controller.auth import encrypt_password
 from models.users_model import User;
 from models.users_model import UpdateUser;
 from bson import ObjectId
@@ -101,9 +102,17 @@ def create_user(user: User):
     try:
         print("Trying to insert user")
         user_data = user.model_dump()
+        
+        existing_user = get_user_by_email(user_data["email"])
+        if existing_user:
+            raise HTTPException(status_code=400,
+                                detail="User with that email already exists.")
 
         user_data.pop("id", None)
         user_data["role"] = "user"
+        
+        encrypted_password = encrypt_password(user_data["password"])
+        user_data["password"] = encrypted_password
         
         result = collection.insert_one(user_data)
         
