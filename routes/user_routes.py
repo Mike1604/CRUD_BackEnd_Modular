@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, Query, UploadFile
-from controller.auth import verify_token
+from fastapi import APIRouter, HTTPException, File, Query, UploadFile
 from models.users_model import User, UpdateUser, UserBatchRequest, Token
 from controller.auth import create_jwt
 from controller.user_controller import create_user, get_all_users, get_user_by_id, update_user_by_id, update_user_pic, get_users_by_batch, get_users_by_email;
@@ -7,7 +6,7 @@ from controller.user_controller import create_user, get_all_users, get_user_by_i
 router = APIRouter()
 
 @router.get('/')
-def get_users(user_id: str = Depends(verify_token)):
+def get_users():
     try:
         result = get_all_users()
         

@@ -210,11 +210,12 @@ def get_all_group_posts(group_id: str):
         print(f"Error getting groups: {e}")
         raise
 
-def add_group_post(group_id: str, post: GroupPost):
+def add_group_post(group_id: str, userId: str, post: GroupPost):
     try:
         print("Trying to add a new group post")
         
         group_post = post.model_dump()
+        group_post["post_owner"] = userId
         group_post["group_owner"] = group_id  
         group_post["created_at"] = datetime.datetime.now(datetime.timezone.utc)
         
@@ -229,8 +230,24 @@ def add_group_post(group_id: str, post: GroupPost):
         print(f"Error creating post: {e}")
         raise
     
-def remove_group_post(group_id: str, post_id: str):
+def get_group_post_by_id(post_id:str):
+    try:
+        id_mongo = ObjectId(post_id)
+        result = groupPostCollection.find_one({"_id":id_mongo})
+
+        if result is None:
+            raise ValueError(f"No group post found with id: {id}")
+        
+        result["id"] = str(result["_id"])
+        del result["_id"]
+        
+        return result;
+    except Exception as e:
+        print(f"Error trying to find post: {e}")
+        raise
     
+    
+def remove_group_post(post_id: str):
     try:
         delete_result = groupPostCollection.delete_one({"_id": ObjectId(post_id)})
 
