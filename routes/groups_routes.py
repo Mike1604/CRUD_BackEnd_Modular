@@ -1,5 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from controller.user_controller import get_user_by_id, get_users_by_batch
 from models.group_models import AddMemberRequest, Group, GroupPost, UpdateGroupData
 from controller.auth import verify_token
 from controller.group_controller import add_group_post, get_all_group_posts, get_all_groups, create_group, get_group_post_by_id, remove_group_post, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
@@ -197,7 +198,32 @@ def get_group_posts(group_id: str, userId: str = Depends(verify_token)):
         if group["owner"] != userId and userId not in [member["user_id"] for member in group["members"]]:
             raise HTTPException(status_code=403, detail="Unauthorized")
         
-        return get_all_group_posts(group_id)
+        posts = get_all_group_posts(group_id)
+        
+        if not posts:
+            return [] 
+
+        user_ids = list(set(post["post_owner"] for post in posts))
+
+        users = get_users_by_batch(user_ids)
+        
+        for user in users:
+            if "profile_picture_path" in user and user["profile_picture_path"]:
+                user["profile_picture_path"] = f"http://localhost:8001{user['profile_picture_path']}"
+
+
+        user_dict = {user["id"]: user for user in users}
+        
+
+        for post in posts:
+            post_owner_id = post["post_owner"]
+            post["post_owner"] = user_dict.get(post_owner_id, {
+                "id": post_owner_id,
+                "name": "Unknown",
+                "profile_picture": None
+            })
+
+        return posts
     
     except HTTPException as e:
         raise e 
@@ -205,6 +231,7 @@ def get_group_posts(group_id: str, userId: str = Depends(verify_token)):
     except Exception as e:
         print(f"Error while getting group posts: {e}")
         raise HTTPException(status_code=500, detail="Database error")
+
 
 @router.post('/{group_id}/posts')
 def create_group_post(group_id: str, post: GroupPost, userId: str = Depends(verify_token)):
@@ -217,8 +244,16 @@ def create_group_post(group_id: str, post: GroupPost, userId: str = Depends(veri
         if group["owner"] != userId and userId not in [member["user_id"] for member in group["members"]]:
             raise HTTPException(status_code=403, detail="Unauthorized")
         
+        user = get_user_by_id(userId)
+        
+        if "profile_picture_path" in user and user["profile_picture_path"]:
+                user["profile_picture_path"] = f"http://localhost:8001{user['profile_picture_path']}"
+        
         result = add_group_post(group_id, userId, post)
-        return {"post_id" : result}
+        
+        result["post_owner"] = user
+        
+        return {"post" : result}
     
     except HTTPException as e:
         raise e 

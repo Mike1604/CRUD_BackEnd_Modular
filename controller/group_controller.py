@@ -199,7 +199,7 @@ def remove_member(groupId:str, userId:str):
 
 def get_all_group_posts(group_id: str):
     try:
-        group_posts = list(groupPostCollection.find({"group_owner" : group_id}))
+        group_posts = list(groupPostCollection.find({"group_owner": group_id}).sort("created_at", -1))
 
         for group_post in group_posts:
             group_post["id"] = str(group_post["_id"])  
@@ -222,8 +222,10 @@ def add_group_post(group_id: str, userId: str, post: GroupPost):
         result = groupPostCollection.insert_one(group_post)
 
         if result.acknowledged:
-            print(f"Insert result: {result.inserted_id}")
-            return str(result.inserted_id)  
+            inserted_post = groupPostCollection.find_one({"_id": result.inserted_id})
+            inserted_post["id"] = str(inserted_post.pop("_id"))
+
+            return inserted_post  
         else:
             raise ValueError("Failed to add the post.")
     except Exception as e:
