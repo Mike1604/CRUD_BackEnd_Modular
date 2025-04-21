@@ -3,7 +3,7 @@ import datetime
 from fastapi import HTTPException, UploadFile
 from pymongo import ReturnDocument
 from models.users_model import User;
-from models.group_models import Group, GroupMember, GroupPost, RoleEnum;
+from models.group_models import Group, GroupActivity, GroupMember, GroupPost, RoleEnum;
 from controller.user_controller import get_user_by_id
 from bson import ObjectId
 from db.db import db;
@@ -11,13 +11,14 @@ import os
 
 groupCollection = db.get_collection("groups")
 groupPostCollection = db.get_collection("group_posts")
+groupActivityCollection = db.get_collection("group_activity")
+
 UPLOAD_DIR = os.path.join(os.getcwd(), "public/groups_profile")
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 ALLOWED_IMAGE_EXTENSIONS = {"image/jpeg", "image/png"}
 
-#Todo: update with owned groups
 def get_all_groups(user_id: str):
     try:
         groups = list(groupCollection.find({
@@ -258,5 +259,90 @@ def remove_group_post(post_id: str):
         
         return {"message": "Group post deleted successfully"}
     except Exception as e:
+        print(f"Error removing post: {e}")
+        raise
+
+def get_all_group_activities(group_id: str):
+    try:
+        group_acts = list(groupActivityCollection.find({"group_owner": group_id}).sort("created_at", -1))
+
+        for group_act in group_acts:
+            group_act["id"] = str(group_act["_id"])  
+            del group_act["_id"]
+        
+        return group_acts
+    except Exception as e:
+        print(f"Error getting groups: {e}")
+        raise
+
+def get_group_act_by_id(actId: str):
+    try:
+        id_mongo = ObjectId(actId)
+        result = groupActivityCollection.find_one({"_id":id_mongo})
+
+        if result is None:
+            raise ValueError(f"No group activity found with id: {actId}")
+        
+        result["id"] = str(result["_id"])
+        del result["_id"]
+        
+        return result;
+    except Exception as e:
+        print(f"Error trying to find activity: {e}")
+        raise
+
+def add_group_act(groupId: str, userId: str, activity: GroupActivity, ):
+    try:
+        print("Trying to add a new group post")
+        
+        group_act = activity.model_dump()
+        group_act["added_by"] = userId
+        group_act["group_owner"] = groupId  
+        group_act["created_at"] = datetime.datetime.now(datetime.timezone.utc)
+        
+        result = groupActivityCollection.insert_one(group_act)
+
+        if result.acknowledged:
+            inserted_post = groupActivityCollection.find_one({"_id": result.inserted_id})
+            inserted_post["id"] = str(inserted_post.pop("_id"))
+
+            return inserted_post  
+        else:
+            raise ValueError("Failed to add the group activity.")
+    except Exception as e:
         print(f"Error creating post: {e}")
+        raise
+
+def update_group_act(actId: str, updated_data: GroupActivity):
+    try:
+        print(f"Trying to update group activity {actId}")
+
+        id_mongo = ObjectId(actId)
+        
+        result = groupActivityCollection.update_one(
+            {"_id": id_mongo}, 
+            {"$set": updated_data}  
+        )
+        
+        if result.matched_count > 0:
+            print(f"Group activity with id {actId} updated successfully")
+            return get_group_act_by_id(actId)  
+        else:
+            print(f"No group activity found with id {actId}")
+            return None  
+            
+    except Exception as e:
+        print(f"Error updating group: {e}")
+        raise Exception("Error while trying to update the group activity")
+
+def remove_group_act(activityId: str):
+    try:
+        delete_result = groupActivityCollection.delete_one({"_id": ObjectId(activityId)})
+
+        if delete_result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Failed to delete group activity")
+        
+        return {"message": "Group activity deleted successfully"}
+    except Exception as e:
+        print(f"Error removing activity: {e}")
         raise

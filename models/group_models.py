@@ -26,3 +26,17 @@ class UpdateGroupData(BaseModel):
     
 class GroupPost(BaseModel):
     text_content: str
+
+class GroupActivity(BaseModel):
+    title: str
+    description	: str
+    type: str
+    evaluation: str
+    deck: str
+    deckOwner: str
+
+class EditGroupActivity(BaseModel):
+    title: str
+    description	: str
+    type: str
+    evaluation: str

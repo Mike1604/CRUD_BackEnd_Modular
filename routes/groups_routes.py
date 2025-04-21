@@ -1,9 +1,9 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from controller.user_controller import get_user_by_id, get_users_by_batch
-from models.group_models import AddMemberRequest, Group, GroupPost, UpdateGroupData
+from models.group_models import AddMemberRequest, EditGroupActivity, Group, GroupPost, UpdateGroupData, GroupActivity
 from controller.auth import verify_token
-from controller.group_controller import add_group_post, get_all_group_posts, get_all_groups, create_group, get_group_post_by_id, remove_group_post, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
+from controller.group_controller import add_group_act, add_group_post, get_all_group_activities, get_all_group_posts, get_all_groups, create_group, get_group_post_by_id, remove_group_act, remove_group_post, update_group_act, update_group_pic, update_group_by_id, get_group_by_id, delete_group_by_id, delete_group_pic, add_member, remove_member
 
 router = APIRouter()
 
@@ -284,4 +284,104 @@ def delete_group_post(group_id: str, post_id: str, userId: str = Depends(verify_
     
     except Exception as e:
         print(f"Error while removing a group post: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    
+@router.get('/{group_id}/activity')
+def get_group_activities(group_id: str, userId: str = Depends(verify_token)):
+    try:
+        group = get_group_by_id(group_id)
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        if group["owner"] != userId and userId not in [member["user_id"] for member in group["members"]]:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        acts = get_all_group_activities(group_id)
+        
+        if not acts:
+            return [] 
+        
+        return acts
+    
+    except HTTPException as e:
+        raise e 
+    
+    except Exception as e:
+        print(f"Error while getting group posts: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.post('/{group_id}/activity/')
+def create_group_act(group_id: str, activity: GroupActivity, userId: str = Depends(verify_token)):
+    try:
+        group = get_group_by_id(group_id)
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        is_admin = False
+        for member in group["members"]:
+            if member["user_id"] == userId and member["role"] == "Admin":
+                is_admin = True
+
+        if group["owner"] != userId and not is_admin:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
+        
+        result = add_group_act(group_id, userId, activity)
+
+        return {"group_act" : result}
+    except HTTPException as e:
+        raise e 
+    
+    except Exception as e:
+        print(f"Error while removing a group post: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+
+@router.put('/{group_id}/activity/{activityId}')
+def update_group_activity(group_id: str, activityId: str, activity: EditGroupActivity, userId: str = Depends(verify_token)):
+    try:
+        group = get_group_by_id(group_id)
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        is_admin = False
+        for member in group["members"]:
+            if member["user_id"] == userId and member["role"] == "Admin":
+                is_admin = True
+
+        if group["owner"] != userId and not is_admin:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        activity = activity.model_dump()
+        result = update_group_act(activityId, activity)
+        
+        return {"message": "Group activity updated successfully", "activity" : result}
+    
+    except HTTPException as e:
+        raise e 
+    except Exception as e:
+        print(f"Error aupdating group activity: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    
+@router.delete('/{group_id}/activity/{activityId}')
+def delete_group_activity(group_id: str, activityId: str, userId: str = Depends(verify_token)):
+    try:
+        group = get_group_by_id(group_id)
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        if group["owner"] != userId and userId not in [member["user_id"] for member in group["members"]]:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        return remove_group_act(activityId)
+    
+    except HTTPException as e:
+        raise e 
+    
+    except Exception as e:
+        print(f"Error while removing a group activity: {e}")
         raise HTTPException(status_code=500, detail="Database error")
