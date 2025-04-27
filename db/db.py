@@ -2,7 +2,7 @@ from pymongo import MongoClient
 
 
 def get_db_client():
-    uri = "mongodb+srv://Modular:FlashCardsModular@cluster0.mresw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    uri = "mongodb://localhost:27017/"
     conn = MongoClient(uri);
     return conn;
 
