@@ -93,7 +93,7 @@ def update_group_pic(group_picture: UploadFile, groupId: str):
     with open(file_location, "wb") as f:
         shutil.copyfileobj(group_picture.file, f)
 
-    return f"/public/groups_profile/{groupId}.{file_extension}"
+    return f"/public/groups_profile/{groupId}.png"
 
 
 def delete_group_pic(image_path: str):

@@ -15,4 +15,8 @@ tags_metadata = [
         "name": "Groups",
         "description": "Endpoints for creating, reading, updating, and deleting groups.",
     },
+    {
+        "name": "Stats",
+        "description": "Endpoints for creating, reading and updating the stats apps",
+    },
 ]
