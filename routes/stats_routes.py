@@ -51,10 +51,18 @@ def get_group_study_sessions_stats(groupId: str, userId: str = Depends(verify_to
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error getting study sessions")
 
-@router.post("/group-activity-session")
-def add_group_study_session(session: GroupStudySession, userId: str = Depends(verify_token)):
+@router.post("/group-activity-session/{groupId}")
+def add_group_study_session(groupId: str, session: GroupStudySession, userId: str = Depends(verify_token)):
     try:
-        record_group_study_session(session, userId)
+        group = get_group_by_id(groupId)
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        if group["owner"] != userId and userId not in [member["user_id"] for member in group["members"]]:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        record_group_study_session(session, userId, groupId)
         
     except Exception as e:
         print(f"Error: {e}")

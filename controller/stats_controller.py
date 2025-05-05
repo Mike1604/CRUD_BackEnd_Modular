@@ -49,8 +49,9 @@ def get_group_study_sessions(groupId:str):
         print(f"Error getting study sessions: {e}")
         raise
 
-def record_group_study_session(data : GroupStudySession, userId : str):
+def record_group_study_session(data : GroupStudySession, userId : str, groupId: str):
     session_doc = data.model_dump()
+    session_doc["group_id"] = groupId
     session_doc["user_id"] = userId
     insert_result = groupStatsCollection.insert_one(session_doc)
 
