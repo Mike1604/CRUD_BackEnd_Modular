@@ -34,6 +34,7 @@ class GroupActivity(BaseModel):
     evaluation: str
     deck: str
     deckOwner: str
+    exam_id: str
 
 class EditGroupActivity(BaseModel):
     title: str
